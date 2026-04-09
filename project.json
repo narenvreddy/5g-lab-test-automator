@@ -1,0 +1,21 @@
+{
+  "overview": "A dashboard for managing 5G lab test automation. Features a polished header with logo and user profile, plus a dynamic list of test rows — each with a Test ID editor, Request Type selector, details display, and a Start button.",
+  "features": [
+    "Header with 5G Lab Test Automator logo and title",
+    "User profile section with name and avatar",
+    "Dynamic test rows with add (+) button",
+    "Test ID editor per row",
+    "Request Type dropdown (UE Capa / NV Filtering)",
+    "Details display per row",
+    "Start button to trigger each test"
+  ],
+  "category": "productivity",
+  "tags": [
+    "5g",
+    "lab",
+    "testing",
+    "automation",
+    "dashboard"
+  ],
+  "last_updated": "2026-04-09T09:32:29.954Z"
+}

@@ -1,0 +1,31 @@
+type TransformArgs = 
+ record {
+   context: blob;
+   response: HttpRequestResult;
+ };
+type HttpRequestResult = 
+ record {
+   body: blob;
+   headers: vec HttpHeader;
+   status: nat;
+ };
+type HttpHeader = 
+ record {
+   name: text;
+   value: text;
+ };
+service : {
+  /// Fetches test data for a given testId via HTTP outcall.
+  /// Uses a placeholder endpoint; real 5G endpoint can be substituted.
+  fetchTestData: (testId: text) -> (text);
+  /// Retrieves (deviceId, results) for a given testId.
+  getTestData: (testId: text) -> (opt record {
+                                        text;
+                                        text;
+                                      });
+  /// Stores deviceId and results keyed by testId.
+  setTestData: (testId: text, deviceId: text, results: text) -> ();
+  /// Triggers the HTTP outcall for the given testId and returns the raw response.
+  startFetching: (testId: text) -> (text);
+  transform: (args: TransformArgs) -> (HttpRequestResult) query;
+}
