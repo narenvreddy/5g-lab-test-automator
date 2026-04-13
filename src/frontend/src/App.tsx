@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  AlertTriangle,
   ChevronDown,
   Loader2,
   Play,
@@ -168,7 +169,13 @@ function TestRowCard({
             data-ocid="device-id-input"
             value={row.deviceId}
             onChange={(e) => onDeviceIdChange(row.id, e.target.value)}
-            onBlur={(e) => updateTest(row.id, { deviceId: e.target.value })}
+            onBlur={(e) => {
+              if (!row.id.startsWith("local-")) {
+                updateTest(row.id, { deviceId: e.target.value }).catch(
+                  console.error,
+                );
+              }
+            }}
             className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
             placeholder="DEV-001"
           />
@@ -227,35 +234,53 @@ function TestRowCard({
   );
 }
 
+/** Generate a temporary local ID that won't collide with backend UUIDs */
+function tempId(): string {
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function makeEmptyRow(id: string): TestRow {
+  return {
+    id,
+    testId: "",
+    deviceId: "",
+    requestType: "",
+    details: "",
+    results: "",
+    status: "idle",
+  };
+}
+
 export default function App() {
   const [rows, setRows] = useState<TestRow[]>([]);
   const [rowUI, setRowUI] = useState<Record<string, RowUI>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   // Map of row id → debounce timer ref
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {},
   );
 
-  // Load existing tests on mount; create a default one if empty
+  // Load existing tests on mount; create a default one if empty.
+  // If backend is unreachable, fall back to a single local row so the UI
+  // is immediately usable even without the server running.
   useEffect(() => {
     (async () => {
       try {
         let data = await getTests();
         if (data.length === 0) {
-          const defaultRow = await createTest({
-            testId: "",
-            deviceId: "",
-            requestType: "",
-            details: "",
-            results: "",
-            status: "idle",
-          });
+          const defaultRow = await createTest(makeEmptyRow(""));
           data = [defaultRow];
         }
         setRows(data);
       } catch (err) {
         console.error("[App] Failed to load tests:", err);
+        // Backend unreachable — start with one local row
+        setRows([makeEmptyRow(tempId())]);
+        setServerError(
+          "Could not connect to the local server. Changes are local only and will not be saved.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -282,6 +307,8 @@ export default function App() {
       delete debounceTimers.current[id];
     }
 
+    const isLocal = id.startsWith("local-");
+
     if (value.startsWith("TP")) {
       // Mark row as fetching details
       setRowUI((prev) => ({
@@ -291,10 +318,15 @@ export default function App() {
 
       debounceTimers.current[id] = setTimeout(async () => {
         try {
-          // First persist the new testId, then trigger start to fetch TP data
-          await updateTest(id, { testId: value });
-          const updated = await startTest(id);
-          setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
+          if (!isLocal) {
+            // First persist the new testId, then trigger start to fetch TP data
+            await updateTest(id, { testId: value });
+            const updated = await startTest(id);
+            setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
+          } else {
+            // Row not yet saved — show a local error until server is available
+            throw new Error("Row not yet saved to server");
+          }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           setRows((prev) =>
@@ -317,7 +349,9 @@ export default function App() {
         ...prev,
         [id]: { ...prev[id], isFetchingDetails: false },
       }));
-      updateTest(id, { testId: value }).catch(console.error);
+      if (!isLocal) {
+        updateTest(id, { testId: value }).catch(console.error);
+      }
     }
   }, []);
 
@@ -331,10 +365,16 @@ export default function App() {
     setRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, requestType: value } : r)),
     );
-    updateTest(id, { requestType: value }).catch(console.error);
+    if (!id.startsWith("local-")) {
+      updateTest(id, { requestType: value }).catch(console.error);
+    }
   }, []);
 
   const handleStart = async (id: string) => {
+    if (id.startsWith("local-")) {
+      setServerError("Could not save to server. Changes are local only.");
+      return;
+    }
     setRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "running" } : r)),
     );
@@ -357,26 +397,31 @@ export default function App() {
       delete debounceTimers.current[id];
     }
     setRows((prev) => prev.filter((r) => r.id !== id));
-    try {
-      await deleteTest(id);
-    } catch (err) {
-      console.error("[App] Delete failed:", err);
+    // Only call server if this row was actually persisted
+    if (!id.startsWith("local-")) {
+      try {
+        await deleteTest(id);
+      } catch (err) {
+        console.error("[App] Delete failed:", err);
+      }
     }
   };
 
   const handleAddRow = async () => {
+    // Optimistic update: add row immediately with a temporary local ID
+    const localId = tempId();
+    const optimisticRow = makeEmptyRow(localId);
+    setRows((prev) => [...prev, optimisticRow]);
+
+    // Attempt to persist to backend in background
     try {
-      const newRow = await createTest({
-        testId: "",
-        deviceId: "",
-        requestType: "",
-        details: "",
-        results: "",
-        status: "idle",
-      });
-      setRows((prev) => [...prev, newRow]);
+      const saved = await createTest(makeEmptyRow(""));
+      // Replace temporary ID with the real backend ID
+      setRows((prev) => prev.map((r) => (r.id === localId ? { ...saved } : r)));
     } catch (err) {
-      console.error("[App] Failed to create row:", err);
+      console.error("[App] Failed to save new row to server:", err);
+      // Keep the row visible — just warn the user
+      setServerError("Could not save to server. Changes are local only.");
     }
   };
 
@@ -481,6 +526,27 @@ export default function App() {
       {/* ── Main content ──────────────────────────────────────────── */}
       <main className="flex-1 bg-background">
         <div className="max-w-7xl mx-auto px-6 py-8">
+          {/* ── Server error banner ── */}
+          {serverError && (
+            <div
+              data-ocid="server-error-banner"
+              role="alert"
+              className="flex items-start gap-3 mb-5 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive"
+            >
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <p className="flex-1 text-sm leading-snug">{serverError}</p>
+              <button
+                type="button"
+                aria-label="Dismiss error"
+                data-ocid="dismiss-error-btn"
+                onClick={() => setServerError(null)}
+                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-destructive/20 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Section heading */}
           <div className="flex items-center justify-between mb-6">
             <div>
