@@ -317,23 +317,29 @@ export default function App() {
       }));
 
       debounceTimers.current[id] = setTimeout(async () => {
+        const url = `http://107.111.159.37:8000/api/tp/data/${value}`;
+        console.log(`[App] Fetching TP details — GET ${url}`);
         try {
+          const response = await fetch(url);
+          const data = await response.json();
+          console.log("[App] TP API response:", data);
+          const description: string =
+            typeof data?.description === "string" ? data.description : "";
+          setRows((prev) =>
+            prev.map((r) => (r.id === id ? { ...r, details: description } : r)),
+          );
+          // Persist testId + details to backend if row is saved
           if (!isLocal) {
-            // First persist the new testId, then trigger start to fetch TP data
-            await updateTest(id, { testId: value });
-            const updated = await startTest(id);
-            setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
-          } else {
-            // Row not yet saved — show a local error until server is available
-            throw new Error("Row not yet saved to server");
+            await updateTest(id, { testId: value, details: description }).catch(
+              console.error,
+            );
           }
         } catch (err) {
+          console.error("[App] TP API fetch error:", err);
           const msg = err instanceof Error ? err.message : String(err);
           setRows((prev) =>
             prev.map((r) =>
-              r.id === id
-                ? { ...r, details: `API call failed: ${msg}`, status: "error" }
-                : r,
+              r.id === id ? { ...r, details: `API call failed: ${msg}` } : r,
             ),
           );
         } finally {
