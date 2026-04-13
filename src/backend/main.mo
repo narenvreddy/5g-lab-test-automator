@@ -42,7 +42,7 @@ actor {
   /// Fetches test data for a given testId via HTTP outcall.
   /// Uses a placeholder endpoint; real 5G endpoint can be substituted.
   public func fetchTestData(testId : Text) : async Text {
-    let url = "https://jsonplaceholder.typicode.com/posts/1?testId=" # testId;
+    let url = "http://107.111.159.37:8000/api/tp/data/" # testId;
     let request : HttpRequestArgs = {
       url = url;
       max_response_bytes = ?16_384;

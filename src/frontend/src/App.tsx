@@ -1,10 +1,8 @@
-import { createActor } from "@/backend";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useActor } from "@caffeineai/core-infrastructure";
 import {
   ChevronDown,
   Loader2,
@@ -15,30 +13,14 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-type RequestType = "UE Capa" | "NV Filtering" | "";
-
-interface TestRow {
-  id: number;
-  testId: string;
-  requestType: RequestType;
-  deviceId: string;
-  results: string;
-  details: string;
-  status: "idle" | "running" | "completed" | "error";
-  isFetchingDetails?: boolean;
-}
-
-const initialRow: TestRow = {
-  id: 1,
-  testId: "TEST-5G-001",
-  requestType: "UE Capa",
-  deviceId: "",
-  results: "",
-  details:
-    "Configure UE capability parameters for 5G NR band n78. Validate PDCP and RLC layer settings with baseline network profile.",
-  status: "idle",
-};
+import {
+  type TestRow,
+  createTest,
+  deleteTest,
+  getTests,
+  startTest,
+  updateTest,
+} from "./api";
 
 const STATUS_CONFIG = {
   idle: {
@@ -59,6 +41,11 @@ const STATUS_CONFIG = {
   },
 };
 
+// Local-only UI state (not persisted to backend)
+interface RowUI {
+  isFetchingDetails: boolean;
+}
+
 function FiveGIcon() {
   return (
     <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 border border-primary/20">
@@ -74,16 +61,25 @@ function FiveGIcon() {
 
 function TestRowCard({
   row,
-  onUpdate,
+  rowIndex,
+  isFetchingDetails,
+  onTestIdChange,
+  onDeviceIdChange,
+  onRequestTypeChange,
   onStart,
   onDelete,
 }: {
   row: TestRow;
-  onUpdate: (id: number, updates: Partial<TestRow>) => void;
-  onStart: (id: number) => void;
-  onDelete: (id: number) => void;
+  rowIndex: number;
+  isFetchingDetails: boolean;
+  onTestIdChange: (id: string, value: string) => void;
+  onDeviceIdChange: (id: string, value: string) => void;
+  onRequestTypeChange: (id: string, value: string) => void;
+  onStart: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const statusCfg = STATUS_CONFIG[row.status];
+
   return (
     <div
       data-ocid="test-row-card"
@@ -106,7 +102,7 @@ function TestRowCard({
         <div className="flex-shrink-0 self-end mb-1">
           <div className="w-7 h-7 rounded-md bg-muted border border-border flex items-center justify-center">
             <span className="text-xs font-mono text-muted-foreground">
-              {String(row.id).padStart(2, "0")}
+              {String(rowIndex + 1).padStart(2, "0")}
             </span>
           </div>
         </div>
@@ -119,7 +115,7 @@ function TestRowCard({
           <Input
             data-ocid="test-id-input"
             value={row.testId}
-            onChange={(e) => onUpdate(row.id, { testId: e.target.value })}
+            onChange={(e) => onTestIdChange(row.id, e.target.value)}
             className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
           />
         </div>
@@ -129,14 +125,13 @@ function TestRowCard({
           <Label className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">
             Request Type
           </Label>
-          <div
-            data-ocid="request-type-display"
-            className="h-8 flex items-center px-3 rounded-md border border-primary/20 bg-primary/5 text-sm font-medium text-primary"
-          >
-            {row.requestType || (
-              <span className="text-muted-foreground italic text-xs">—</span>
-            )}
-          </div>
+          <Input
+            data-ocid="request-type-input"
+            value={row.requestType}
+            onChange={(e) => onRequestTypeChange(row.id, e.target.value)}
+            className="h-8 text-sm bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+            placeholder="e.g. UE Capa"
+          />
         </div>
 
         {/* Details — flex-1, takes remaining space */}
@@ -144,7 +139,7 @@ function TestRowCard({
           <Label className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">
             Details
           </Label>
-          {row.isFetchingDetails ? (
+          {isFetchingDetails ? (
             <div
               data-ocid="details-loading"
               className="h-8 flex items-center gap-2 text-sm text-primary px-3 rounded-md border border-primary/20 bg-primary/5"
@@ -169,14 +164,14 @@ function TestRowCard({
           <Label className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">
             Device ID
           </Label>
-          <div
-            data-ocid="device-id-display"
-            className="h-8 flex items-center text-sm font-mono text-foreground bg-muted/40 border border-border rounded-md px-3"
-          >
-            {row.deviceId || (
-              <span className="text-muted-foreground italic text-xs">—</span>
-            )}
-          </div>
+          <Input
+            data-ocid="device-id-input"
+            value={row.deviceId}
+            onChange={(e) => onDeviceIdChange(row.id, e.target.value)}
+            onBlur={(e) => updateTest(row.id, { deviceId: e.target.value })}
+            className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+            placeholder="DEV-001"
+          />
         </div>
 
         {/* Start button + status — fixed column, results below */}
@@ -233,77 +228,39 @@ function TestRowCard({
 }
 
 export default function App() {
-  const [rows, setRows] = useState<TestRow[]>([initialRow]);
-  const [counter, setCounter] = useState(2);
-  const { actor } = useActor(createActor);
+  const [rows, setRows] = useState<TestRow[]>([]);
+  const [rowUI, setRowUI] = useState<Record<string, RowUI>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   // Map of row id → debounce timer ref
-  const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>(
+  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {},
   );
 
-  const handleUpdate = useCallback(
-    (id: number, updates: Partial<TestRow>) => {
-      setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, ...updates } : r)),
-      );
-
-      // If the testId field changed, handle TP-prefixed debounce logic
-      if ("testId" in updates && updates.testId !== undefined) {
-        const newTestId = updates.testId;
-
-        // Clear any existing debounce for this row
-        if (debounceTimers.current[id]) {
-          clearTimeout(debounceTimers.current[id]);
-          delete debounceTimers.current[id];
+  // Load existing tests on mount; create a default one if empty
+  useEffect(() => {
+    (async () => {
+      try {
+        let data = await getTests();
+        if (data.length === 0) {
+          const defaultRow = await createTest({
+            testId: "",
+            deviceId: "",
+            requestType: "",
+            details: "",
+            results: "",
+            status: "idle",
+          });
+          data = [defaultRow];
         }
-
-        if (newTestId.startsWith("TP") && actor) {
-          // Mark row as fetching and schedule the call
-          setRows((prev) =>
-            prev.map((r) =>
-              r.id === id ? { ...r, isFetchingDetails: true } : r,
-            ),
-          );
-
-          debounceTimers.current[id] = setTimeout(async () => {
-            try {
-              const result = await actor.fetchTestData(newTestId);
-              setRows((prev) =>
-                prev.map((r) =>
-                  r.id === id
-                    ? { ...r, details: result, isFetchingDetails: false }
-                    : r,
-                ),
-              );
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
-              setRows((prev) =>
-                prev.map((r) =>
-                  r.id === id
-                    ? {
-                        ...r,
-                        details: `API call failed: ${msg}`,
-                        isFetchingDetails: false,
-                        status: "error",
-                      }
-                    : r,
-                ),
-              );
-            }
-          }, 600);
-        } else {
-          // Not TP-prefixed — cancel any loading state
-          setRows((prev) =>
-            prev.map((r) =>
-              r.id === id ? { ...r, isFetchingDetails: false } : r,
-            ),
-          );
-        }
+        setRows(data);
+      } catch (err) {
+        console.error("[App] Failed to load tests:", err);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    [actor],
-  );
+    })();
+  }, []);
 
   // Clean up all timers on unmount
   useEffect(() => {
@@ -313,40 +270,77 @@ export default function App() {
     };
   }, []);
 
-  const handleStart = async (id: number) => {
-    const row = rows.find((r) => r.id === id);
-    if (!row) return;
+  const handleTestIdChange = useCallback((id: string, value: string) => {
+    // Optimistic local update
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, testId: value } : r)),
+    );
 
+    // Persist to backend (debounced for TP auto-fetch)
+    if (debounceTimers.current[id]) {
+      clearTimeout(debounceTimers.current[id]);
+      delete debounceTimers.current[id];
+    }
+
+    if (value.startsWith("TP")) {
+      // Mark row as fetching details
+      setRowUI((prev) => ({
+        ...prev,
+        [id]: { ...prev[id], isFetchingDetails: true },
+      }));
+
+      debounceTimers.current[id] = setTimeout(async () => {
+        try {
+          // First persist the new testId, then trigger start to fetch TP data
+          await updateTest(id, { testId: value });
+          const updated = await startTest(id);
+          setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setRows((prev) =>
+            prev.map((r) =>
+              r.id === id
+                ? { ...r, details: `API call failed: ${msg}`, status: "error" }
+                : r,
+            ),
+          );
+        } finally {
+          setRowUI((prev) => ({
+            ...prev,
+            [id]: { ...prev[id], isFetchingDetails: false },
+          }));
+        }
+      }, 500);
+    } else {
+      // Not TP — just persist
+      setRowUI((prev) => ({
+        ...prev,
+        [id]: { ...prev[id], isFetchingDetails: false },
+      }));
+      updateTest(id, { testId: value }).catch(console.error);
+    }
+  }, []);
+
+  const handleDeviceIdChange = useCallback((id: string, value: string) => {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, deviceId: value } : r)),
+    );
+  }, []);
+
+  const handleRequestTypeChange = useCallback((id: string, value: string) => {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, requestType: value } : r)),
+    );
+    updateTest(id, { requestType: value }).catch(console.error);
+  }, []);
+
+  const handleStart = async (id: string) => {
     setRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "running" } : r)),
     );
-
     try {
-      // Use startFetching if available on the actor, otherwise fall back to fetchTestData
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const actorAny = actor as any;
-      if (actor && typeof actorAny.startFetching === "function") {
-        const result: string = await actorAny.startFetching(row.testId);
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === id ? { ...r, status: "completed", results: result } : r,
-          ),
-        );
-      } else if (actor) {
-        const result = await actor.fetchTestData(row.testId);
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === id ? { ...r, status: "completed", results: result } : r,
-          ),
-        );
-      } else {
-        // Actor not ready — simulate completion
-        setTimeout(() => {
-          setRows((prev) =>
-            prev.map((r) => (r.id === id ? { ...r, status: "completed" } : r)),
-          );
-        }, 3000);
-      }
+      const updated = await startTest(id);
+      setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setRows((prev) =>
@@ -357,28 +351,33 @@ export default function App() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    // Clear any pending debounce for this row
+  const handleDelete = async (id: string) => {
     if (debounceTimers.current[id]) {
       clearTimeout(debounceTimers.current[id]);
       delete debounceTimers.current[id];
     }
     setRows((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await deleteTest(id);
+    } catch (err) {
+      console.error("[App] Delete failed:", err);
+    }
   };
 
-  const handleAddRow = () => {
-    const newRow: TestRow = {
-      id: counter,
-      testId: `TEST-5G-${String(counter).padStart(3, "0")}`,
-      requestType: "UE Capa",
-      deviceId: "",
-      results: "",
-      details:
-        "New test configuration pending. Set request type and configure parameters before starting.",
-      status: "idle",
-    };
-    setRows((prev) => [...prev, newRow]);
-    setCounter((c) => c + 1);
+  const handleAddRow = async () => {
+    try {
+      const newRow = await createTest({
+        testId: "",
+        deviceId: "",
+        requestType: "",
+        details: "",
+        results: "",
+        status: "idle",
+      });
+      setRows((prev) => [...prev, newRow]);
+    } catch (err) {
+      console.error("[App] Failed to create row:", err);
+    }
   };
 
   const runningCount = rows.filter((r) => r.status === "running").length;
@@ -508,33 +507,55 @@ export default function App() {
             </div>
           </div>
 
+          {/* Loading state */}
+          {isLoading && (
+            <div
+              data-ocid="loading-state"
+              className="flex items-center justify-center gap-3 py-16 text-muted-foreground"
+            >
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-sm">Loading test rows…</span>
+            </div>
+          )}
+
           {/* Test rows */}
-          <div data-ocid="test-rows-container" className="flex flex-col gap-3">
-            {rows.map((row) => (
-              <TestRowCard
-                key={row.id}
-                row={row}
-                onUpdate={handleUpdate}
-                onStart={handleStart}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
+          {!isLoading && (
+            <div
+              data-ocid="test-rows-container"
+              className="flex flex-col gap-3"
+            >
+              {rows.map((row, index) => (
+                <TestRowCard
+                  key={row.id}
+                  row={row}
+                  rowIndex={index}
+                  isFetchingDetails={rowUI[row.id]?.isFetchingDetails ?? false}
+                  onTestIdChange={handleTestIdChange}
+                  onDeviceIdChange={handleDeviceIdChange}
+                  onRequestTypeChange={handleRequestTypeChange}
+                  onStart={handleStart}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Add row button */}
-          <div className="mt-4">
-            <button
-              data-ocid="add-row-btn"
-              type="button"
-              onClick={handleAddRow}
-              className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-smooth group"
-            >
-              <div className="w-6 h-6 rounded-md border border-current flex items-center justify-center group-hover:bg-primary/10 transition-smooth">
-                <Plus className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-sm font-medium">Add Test Row</span>
-            </button>
-          </div>
+          {!isLoading && (
+            <div className="mt-4">
+              <button
+                data-ocid="add-row-btn"
+                type="button"
+                onClick={handleAddRow}
+                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-smooth group"
+              >
+                <div className="w-6 h-6 rounded-md border border-current flex items-center justify-center group-hover:bg-primary/10 transition-smooth">
+                  <Plus className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-sm font-medium">Add Test Row</span>
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
