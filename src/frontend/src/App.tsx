@@ -26,19 +26,23 @@ import {
 const STATUS_CONFIG = {
   idle: {
     label: "Ready",
+    // Muted indigo — calm, professional
     color: "bg-muted text-muted-foreground border-border",
   },
   running: {
     label: "Running",
-    color: "bg-primary/10 text-primary border-primary/30",
+    // Rich royal blue — active and trustworthy
+    color: "bg-primary/12 text-primary border-primary/35",
   },
   completed: {
     label: "Completed",
-    color: "bg-chart-1/10 text-chart-1 border-chart-1/30",
+    // Emerald teal — success, executive-grade
+    color: "bg-chart-1/12 text-chart-1 border-chart-1/35",
   },
   error: {
     label: "Error",
-    color: "bg-destructive/10 text-destructive border-destructive/30",
+    // Warm red — visible but not neon
+    color: "bg-destructive/12 text-destructive border-destructive/35",
   },
 };
 
@@ -49,10 +53,10 @@ interface RowUI {
 
 function FiveGIcon() {
   return (
-    <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 border border-primary/20">
+    <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-primary/15 border border-primary/25 glow-primary">
       <Wifi className="w-5 h-5 text-primary" />
-      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full flex items-center justify-center">
-        <span className="text-[6px] font-bold text-accent-foreground leading-none">
+      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full flex items-center justify-center shadow-md">
+        <span className="text-[6px] font-bold text-primary-foreground leading-none">
           5G
         </span>
       </span>
@@ -84,25 +88,28 @@ function TestRowCard({
   return (
     <div
       data-ocid="test-row-card"
-      className="relative group flex flex-col gap-0 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-smooth overflow-hidden"
+      className="relative group flex flex-col gap-0 rounded-xl card-premium hover:border-primary/45 hover:shadow-lg transition-smooth overflow-hidden"
     >
+      {/* Left accent bar — indigo stripe for premium feel */}
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/60 via-accent/30 to-transparent rounded-l-xl" />
+
       {/* Delete button — top-right */}
       <button
         type="button"
         data-ocid="delete-row-btn"
         onClick={() => onDelete(row.id)}
         aria-label="Delete row"
-        className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-smooth opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/12 transition-smooth opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
       >
         <X className="w-3.5 h-3.5" />
       </button>
 
       {/* ── Main row: all fields on one line ── */}
-      <div className="flex items-end gap-3 px-4 pt-3 pb-3 pr-10">
+      <div className="flex items-end gap-3 px-4 pt-3 pb-3 pr-10 pl-5">
         {/* Row number */}
         <div className="flex-shrink-0 self-end mb-1">
-          <div className="w-7 h-7 rounded-md bg-muted border border-border flex items-center justify-center">
-            <span className="text-xs font-mono text-muted-foreground">
+          <div className="w-7 h-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <span className="text-xs font-mono text-primary/70">
               {String(rowIndex + 1).padStart(2, "0")}
             </span>
           </div>
@@ -117,7 +124,7 @@ function TestRowCard({
             data-ocid="test-id-input"
             value={row.testId}
             onChange={(e) => onTestIdChange(row.id, e.target.value)}
-            className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+            className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/25"
           />
         </div>
 
@@ -130,7 +137,7 @@ function TestRowCard({
             data-ocid="request-type-input"
             value={row.requestType}
             onChange={(e) => onRequestTypeChange(row.id, e.target.value)}
-            className="h-8 text-sm bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+            className="h-8 text-sm bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/25"
             placeholder="e.g. UE Capa"
           />
         </div>
@@ -143,7 +150,7 @@ function TestRowCard({
           {isFetchingDetails ? (
             <div
               data-ocid="details-loading"
-              className="h-8 flex items-center gap-2 text-sm text-primary px-3 rounded-md border border-primary/20 bg-primary/5"
+              className="h-8 flex items-center gap-2 text-sm text-primary px-3 rounded-md border border-primary/25 bg-primary/8"
             >
               <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
               <span className="text-xs">Fetching data…</span>
@@ -151,7 +158,7 @@ function TestRowCard({
           ) : (
             <div
               data-ocid="details-text"
-              className="h-8 flex items-center px-3 rounded-md border border-border bg-muted/30 text-sm text-muted-foreground min-w-0"
+              className="h-8 flex items-center px-3 rounded-md border border-border bg-muted/25 text-sm text-muted-foreground min-w-0"
             >
               <span className="truncate">
                 {row.details || <span className="italic text-xs">—</span>}
@@ -176,7 +183,7 @@ function TestRowCard({
                 );
               }
             }}
-            className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/20"
+            className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/25"
             placeholder="DEV-001"
           />
         </div>
@@ -198,7 +205,7 @@ function TestRowCard({
             size="sm"
             onClick={() => onStart(row.id)}
             disabled={row.status === "running"}
-            className="h-8 px-5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 border border-primary/40 transition-smooth disabled:opacity-40 gap-1.5"
+            className="h-8 px-5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/85 shadow-lg shadow-primary/25 border border-primary/50 transition-smooth disabled:opacity-40 gap-1.5"
           >
             <Play className="w-3 h-3 fill-current" />
             {row.status === "running" ? "Running…" : "Start"}
@@ -210,7 +217,7 @@ function TestRowCard({
       {(row.results ||
         row.status === "completed" ||
         row.status === "error") && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-muted/20 border-t border-border/60">
+        <div className="flex items-center gap-2 px-5 py-2 bg-muted/15 border-t border-border/50">
           <Label className="text-[10px] text-muted-foreground uppercase tracking-widest flex-shrink-0">
             Results
           </Label>
@@ -218,8 +225,8 @@ function TestRowCard({
             data-ocid="results-display"
             className={`flex-1 text-sm font-mono px-3 py-1 rounded-md border ${
               row.status === "error"
-                ? "text-destructive bg-destructive/5 border-destructive/20"
-                : "text-foreground bg-muted/30 border-border"
+                ? "text-destructive bg-destructive/8 border-destructive/25"
+                : "text-foreground bg-muted/20 border-border/70"
             } break-words`}
           >
             {row.results || (
@@ -435,15 +442,15 @@ export default function App() {
   const completedCount = rows.filter((r) => r.status === "completed").length;
 
   return (
-    <div className="dark min-h-screen bg-background text-foreground flex flex-col">
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border shadow-md">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* ── Header — premium navy-to-indigo gradient ───────────────── */}
+      <header className="sticky top-0 z-50 header-gradient border-b border-border shadow-sm shadow-primary/8">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo + Title */}
           <div className="flex items-center gap-3">
             <FiveGIcon />
             <div className="flex flex-col leading-none">
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-[0.18em]">
+              <span className="text-[11px] font-mono text-primary/60 uppercase tracking-[0.18em]">
                 Lab Test
               </span>
               <span className="text-base font-display font-semibold text-foreground tracking-tight">
@@ -496,8 +503,8 @@ export default function App() {
                   Admin • 5G-NR
                 </p>
               </div>
-              <Avatar className="h-9 w-9 border-2 border-primary/30 group-hover:border-primary/60 transition-smooth">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold font-display">
+              <Avatar className="h-9 w-9 border-2 border-primary/35 group-hover:border-primary/65 transition-smooth glow-primary">
+                <AvatarFallback className="bg-primary/15 text-primary text-sm font-semibold font-display">
                   LE
                 </AvatarFallback>
               </Avatar>
@@ -507,8 +514,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Sub-nav strip ──────────────────────────────────────────── */}
-      <div className="bg-card/60 border-b border-border/60 backdrop-blur-sm">
+      {/* ── Sub-nav strip — slightly deeper indigo tint ────────────── */}
+      <div className="bg-muted/60 border-b border-border backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 h-10 flex items-center gap-6">
           {["Dashboard", "Test Suites", "Reports", "Lab Status"].map(
             (nav, i) => (
@@ -572,7 +579,7 @@ export default function App() {
               </Badge>
               <Badge
                 variant="outline"
-                className="text-xs border-primary/30 text-primary font-mono"
+                className="text-xs border-primary/35 text-primary font-mono bg-primary/8"
               >
                 NR-SA · n78
               </Badge>
@@ -612,16 +619,16 @@ export default function App() {
             </div>
           )}
 
-          {/* Add row button */}
+          {/* Add row button — premium indigo dashed border */}
           {!isLoading && (
             <div className="mt-4">
               <button
                 data-ocid="add-row-btn"
                 type="button"
                 onClick={handleAddRow}
-                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-smooth group"
+                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border border-dashed border-primary/30 hover:border-primary/55 hover:bg-primary/6 text-muted-foreground hover:text-primary transition-smooth group"
               >
-                <div className="w-6 h-6 rounded-md border border-current flex items-center justify-center group-hover:bg-primary/10 transition-smooth">
+                <div className="w-6 h-6 rounded-md border border-current flex items-center justify-center group-hover:bg-primary/12 transition-smooth">
                   <Plus className="w-3.5 h-3.5" />
                 </div>
                 <span className="text-sm font-medium">Add Test Row</span>
@@ -632,7 +639,7 @@ export default function App() {
       </main>
 
       {/* ── Footer ────────────────────────────────────────────────── */}
-      <footer className="bg-card/40 border-t border-border/60">
+      <footer className="bg-muted/50 border-t border-border">
         <div className="max-w-7xl mx-auto px-6 h-10 flex items-center justify-between">
           <p className="text-[11px] text-muted-foreground font-mono">
             © {new Date().getFullYear()}.{" "}

@@ -9,91 +9,116 @@
     --font-mono: "JetBrains Mono", monospace;
     --radius: 0.375rem;
 
-    --background: 0.99 0 0;
-    --foreground: 0.15 0 0;
-    --card: 1.0 0 0;
-    --card-foreground: 0.15 0 0;
-    --popover: 1.0 0 0;
-    --popover-foreground: 0.15 0 0;
+    /* ── Base surfaces — clean white ── */
+    --background: 1 0 0;
+    --foreground: 0.15 0.015 258;
+    --card: 0.99 0 0;
+    --card-foreground: 0.15 0.015 258;
+    --popover: 0.99 0 0;
+    --popover-foreground: 0.15 0.015 258;
 
-    --primary: 0.35 0 0;
-    --primary-foreground: 0.98 0 0;
+    /* ── Primary — rich royal indigo-blue ── */
+    --primary: 0.52 0.2 258;
+    --primary-foreground: 0.98 0.005 258;
 
-    --secondary: 0.95 0 0;
-    --secondary-foreground: 0.25 0 0;
-    --muted: 0.95 0 0;
-    --muted-foreground: 0.5 0 0;
+    /* ── Secondary — very light indigo tint ── */
+    --secondary: 0.94 0.02 258;
+    --secondary-foreground: 0.3 0.04 258;
 
-    --accent: 0.35 0 0;
-    --accent-foreground: 0.98 0 0;
+    /* ── Muted — soft light gray ── */
+    --muted: 0.96 0.008 258;
+    --muted-foreground: 0.48 0.02 258;
 
+    /* ── Accent — vibrant violet for highlights ── */
+    --accent: 0.58 0.22 278;
+    --accent-foreground: 0.98 0.005 258;
+
+    /* ── Destructive — warm red, readable ── */
     --destructive: 0.55 0.22 25;
     --destructive-foreground: 0.98 0 0;
 
-    --border: 0.9 0 0;
-    --input: 0.9 0 0;
-    --ring: 0.35 0 0;
+    /* ── Borders — light gray with subtle indigo warmth ── */
+    --border: 0.88 0.015 258;
+    --input: 0.88 0.015 258;
+    --ring: 0.52 0.2 258;
 
-    --chart-1: 0.65 0.22 40;
-    --chart-2: 0.6 0.12 185;
-    --chart-3: 0.4 0.07 227;
-    --chart-4: 0.83 0.19 84;
-    --chart-5: 0.77 0.19 70;
+    /* ── Chart palette — professional presentation colors ── */
+    --chart-1: 0.58 0.16 168;
+    --chart-2: 0.52 0.2 258;
+    --chart-3: 0.54 0.18 288;
+    --chart-4: 0.66 0.17 72;
+    --chart-5: 0.46 0.12 248;
 
-    --sidebar: 0.98 0 0;
-    --sidebar-foreground: 0.15 0 0;
-    --sidebar-primary: 0.35 0 0;
-    --sidebar-primary-foreground: 0.98 0 0;
-    --sidebar-accent: 0.95 0 0;
-    --sidebar-accent-foreground: 0.25 0 0;
-    --sidebar-border: 0.9 0 0;
-    --sidebar-ring: 0.35 0 0;
+    /* ── Sidebar ── */
+    --sidebar: 0.97 0.01 258;
+    --sidebar-foreground: 0.15 0.015 258;
+    --sidebar-primary: 0.52 0.2 258;
+    --sidebar-primary-foreground: 0.98 0.005 258;
+    --sidebar-accent: 0.94 0.02 258;
+    --sidebar-accent-foreground: 0.3 0.04 258;
+    --sidebar-border: 0.88 0.015 258;
+    --sidebar-ring: 0.52 0.2 258;
   }
 
   .dark {
-    --background: 0.12 0.01 240;
-    --foreground: 0.92 0.01 240;
-    --card: 0.18 0.01 240;
-    --card-foreground: 0.92 0.01 240;
-    --popover: 0.22 0.01 240;
-    --popover-foreground: 0.92 0.01 240;
+    /* ── Base surfaces — deep navy, warm and rich ── */
+    --background: 0.13 0.022 258;
+    --foreground: 0.93 0.008 255;
+    --card: 0.19 0.025 258;
+    --card-foreground: 0.93 0.008 255;
+    --popover: 0.23 0.022 258;
+    --popover-foreground: 0.93 0.008 255;
 
-    --primary: 0.65 0.18 230;
-    --primary-foreground: 0.12 0.01 240;
+    /* ── Primary — rich royal indigo-blue, authoritative ── */
+    --primary: 0.62 0.2 258;
+    --primary-foreground: 0.97 0.005 258;
 
-    --secondary: 0.22 0.04 240;
-    --secondary-foreground: 0.85 0.01 240;
-    --muted: 0.22 0.04 240;
-    --muted-foreground: 0.58 0.02 240;
+    /* ── Secondary — warm charcoal-indigo ── */
+    --secondary: 0.24 0.03 258;
+    --secondary-foreground: 0.86 0.008 258;
 
-    --accent: 0.75 0.22 230;
-    --accent-foreground: 0.12 0.01 240;
+    /* ── Muted — deep slate with subtle indigo warmth ── */
+    --muted: 0.23 0.03 258;
+    --muted-foreground: 0.56 0.018 258;
 
-    --destructive: 0.55 0.22 25;
-    --destructive-foreground: 0.12 0.01 240;
+    /* ── Accent — vibrant violet for highlights ── */
+    --accent: 0.68 0.22 278;
+    --accent-foreground: 0.97 0.005 258;
 
-    --border: 0.24 0.02 240;
-    --input: 0.24 0.02 240;
-    --ring: 0.75 0.22 230;
+    /* ── Destructive — warm red, readable ── */
+    --destructive: 0.58 0.21 22;
+    --destructive-foreground: 0.97 0.005 258;
 
-    --chart-1: 0.65 0.18 150;
-    --chart-2: 0.75 0.22 230;
-    --chart-3: 0.6 0.15 280;
-    --chart-4: 0.55 0.22 25;
-    --chart-5: 0.7 0.18 45;
+    /* ── Borders — very thin, low contrast, not distracting ── */
+    --border: 0.26 0.025 258;
+    --input: 0.26 0.025 258;
+    --ring: 0.62 0.2 258;
 
-    --sidebar: 0.18 0.01 240;
-    --sidebar-foreground: 0.92 0.01 240;
-    --sidebar-primary: 0.65 0.18 230;
-    --sidebar-primary-foreground: 0.12 0.01 240;
-    --sidebar-accent: 0.22 0.04 240;
-    --sidebar-accent-foreground: 0.85 0.01 240;
-    --sidebar-border: 0.24 0.02 240;
-    --sidebar-ring: 0.75 0.22 230;
+    /* ── Chart palette — boardroom-ready presentation colors ── */
+    /* chart-1: emerald teal — "Completed" success */
+    --chart-1: 0.68 0.15 168;
+    /* chart-2: royal indigo — primary data series */
+    --chart-2: 0.62 0.2 258;
+    /* chart-3: soft violet — secondary data */
+    --chart-3: 0.62 0.18 288;
+    /* chart-4: amber gold — warnings / highlights */
+    --chart-4: 0.74 0.17 72;
+    /* chart-5: slate blue — neutral data series */
+    --chart-5: 0.52 0.12 248;
+
+    /* ── Sidebar — deep navy, slightly deeper than background ── */
+    --sidebar: 0.16 0.025 258;
+    --sidebar-foreground: 0.93 0.008 255;
+    --sidebar-primary: 0.62 0.2 258;
+    --sidebar-primary-foreground: 0.97 0.005 258;
+    --sidebar-accent: 0.24 0.03 258;
+    --sidebar-accent-foreground: 0.86 0.008 258;
+    --sidebar-border: 0.26 0.025 258;
+    --sidebar-ring: 0.62 0.2 258;
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
   * {
     @apply border-border;
@@ -173,10 +198,38 @@
   }
 
   .status-warning {
-    @apply text-chart-5 font-medium;
+    @apply text-chart-4 font-medium;
   }
 
   .status-error {
     @apply text-destructive font-medium;
+  }
+
+  /* Professional header gradient — crisp white to light indigo tint */
+  .header-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(1 0 0) 0%,
+      oklch(0.97 0.015 262) 50%,
+      oklch(0.95 0.02 268) 100%
+    );
+  }
+
+  /* Indigo glow for primary interactive elements */
+  .glow-primary {
+    box-shadow: 0 0 0 1px oklch(0.52 0.2 258 / 0.2), 0 4px 12px
+      oklch(0.52 0.2 258 / 0.12);
+  }
+
+  /* Subtle card with light background and indigo-tinted border */
+  .card-premium {
+    background: linear-gradient(
+      160deg,
+      oklch(1 0 0) 0%,
+      oklch(0.985 0.008 260) 100%
+    );
+    border: 1px solid oklch(0.88 0.015 258);
+    box-shadow: 0 1px 4px oklch(0.5 0.06 258 / 0.08), inset 0 1px 0
+      oklch(1 0 0 / 0.8);
   }
 }
