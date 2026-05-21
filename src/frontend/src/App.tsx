@@ -327,7 +327,7 @@ export default function App() {
         const url = `http://107.111.159.37:8000/api/tp/data/${value}`;
         console.log(`[App] Fetching TP details — GET ${url}`);
         try {
-          const response = await fetch(url);
+          const response = await fetch(url, { redirect: "follow" });
           const data = await response.json();
           console.log("[App] TP API response:", data);
           const description: string =
