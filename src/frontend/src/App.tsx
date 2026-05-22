@@ -18,6 +18,7 @@ import {
   type TestRow,
   createTest,
   deleteTest,
+  getDevices,
   getTests,
   startTest,
   updateTest,
@@ -51,6 +52,7 @@ interface RowUI {
   isFetchingDetails: boolean;
 }
 
+/** Auto-resize a textarea to fit its content */
 function FiveGIcon() {
   return (
     <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-primary/15 border border-primary/25 glow-primary">
@@ -64,10 +66,44 @@ function FiveGIcon() {
   );
 }
 
+/** Fixed-height Details textarea: collapses when empty, fixed height with scroll when text is present */
+function DetailsTextarea({ details }: { details: string }) {
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: details drives height update
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    if (!el.value.trim()) {
+      // Empty — collapse to single line, no scroll
+      el.style.height = "2rem";
+      el.style.overflowY = "hidden";
+    } else {
+      // Has content — fixed standard height, scrollable
+      el.style.height = "5rem";
+      el.style.overflowY = "auto";
+    }
+  }, [details]);
+
+  return (
+    <textarea
+      ref={taRef}
+      data-ocid="details-textarea"
+      value={details}
+      readOnly
+      rows={1}
+      className="px-3 py-1.5 rounded-md border border-border bg-muted/25 text-sm text-muted-foreground resize-none w-full focus:outline-none leading-snug"
+      style={{ minHeight: "2rem", height: "2rem", overflowY: "hidden" }}
+      placeholder="—"
+    />
+  );
+}
+
 function TestRowCard({
   row,
   rowIndex,
   isFetchingDetails,
+  devices,
   onTestIdChange,
   onDeviceIdChange,
   onRequestTypeChange,
@@ -77,6 +113,7 @@ function TestRowCard({
   row: TestRow;
   rowIndex: number;
   isFetchingDetails: boolean;
+  devices: string[];
   onTestIdChange: (id: string, value: string) => void;
   onDeviceIdChange: (id: string, value: string) => void;
   onRequestTypeChange: (id: string, value: string) => void;
@@ -84,7 +121,6 @@ function TestRowCard({
   onDelete: (id: string) => void;
 }) {
   const statusCfg = STATUS_CONFIG[row.status];
-
   return (
     <div
       data-ocid="test-row-card"
@@ -105,12 +141,12 @@ function TestRowCard({
       </button>
 
       {/* ── Main row: all fields on one line ── */}
-      <div className="flex items-end gap-3 px-4 pt-3 pb-3 pr-10 pl-5">
+      <div className="flex items-center gap-3 px-4 pt-3 pb-3 pr-10 pl-5">
         {/* Row number */}
-        <div className="flex-shrink-0 self-end mb-1">
+        <div className="flex-shrink-0 flex items-center justify-center">
           <div className="w-7 h-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <span className="text-xs font-mono text-primary/70">
-              {String(rowIndex + 1).padStart(2, "0")}
+            <span className="text-xs font-mono text-primary/70 text-center">
+              {String(rowIndex + 1).padStart(2, "00")}
             </span>
           </div>
         </div>
@@ -142,7 +178,7 @@ function TestRowCard({
           />
         </div>
 
-        {/* Details — flex-1, takes remaining space */}
+        {/* Details — flex-1, auto-resizing textarea */}
         <div className="flex flex-col gap-1 flex-1 min-w-0">
           <Label className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">
             Details
@@ -156,40 +192,49 @@ function TestRowCard({
               <span className="text-xs">Fetching data…</span>
             </div>
           ) : (
-            <div
-              data-ocid="details-text"
-              className="h-8 flex items-center px-3 rounded-md border border-border bg-muted/25 text-sm text-muted-foreground min-w-0"
-            >
-              <span className="truncate">
-                {row.details || <span className="italic text-xs">—</span>}
-              </span>
-            </div>
+            <DetailsTextarea details={row.details} />
           )}
         </div>
 
-        {/* Device ID */}
-        <div className="flex flex-col gap-1 w-[130px] flex-shrink-0">
+        {/* Device ID — dropdown populated from adb devices */}
+        <div className="flex flex-col gap-1 w-[150px] flex-shrink-0">
           <Label className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">
             Device ID
           </Label>
-          <Input
-            data-ocid="device-id-input"
-            value={row.deviceId}
-            onChange={(e) => onDeviceIdChange(row.id, e.target.value)}
-            onBlur={(e) => {
-              if (!row.id.startsWith("local-")) {
-                updateTest(row.id, { deviceId: e.target.value }).catch(
-                  console.error,
-                );
-              }
-            }}
-            className="h-8 text-sm font-mono bg-background border-input text-foreground focus:border-primary focus:ring-1 focus:ring-primary/25"
-            placeholder="DEV-001"
-          />
+          <div className="relative">
+            <select
+              data-ocid="device-id-select"
+              value={row.deviceId}
+              disabled={devices.length === 0}
+              onChange={(e) => {
+                onDeviceIdChange(row.id, e.target.value);
+                if (!row.id.startsWith("local-")) {
+                  updateTest(row.id, { deviceId: e.target.value }).catch(
+                    console.error,
+                  );
+                }
+              }}
+              className="h-8 w-full text-sm font-mono bg-background border border-input text-foreground rounded-md px-2 pr-7 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/25 appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {devices.length === 0 ? (
+                <option value="">No devices found</option>
+              ) : (
+                <>
+                  <option value="">Select device…</option>
+                  {devices.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          </div>
         </div>
 
         {/* Start button + status — fixed column, results below */}
-        <div className="flex flex-col gap-1.5 flex-shrink-0 items-end">
+        <div className="flex flex-col gap-1.5 flex-shrink-0 items-center justify-center">
           {/* Status badge sits above button as the "label" row */}
           <Badge
             variant="outline"
@@ -263,11 +308,32 @@ export default function App() {
   const [rowUI, setRowUI] = useState<Record<string, RowUI>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<string[]>([]);
 
   // Map of row id → debounce timer ref
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
     {},
   );
+
+  // Fetch connected ADB devices and refresh every 30s
+  const fetchDevices = useCallback(async () => {
+    const url = `${"http://localhost:8001"}/api/devices`;
+    console.log(`[App] Fetching devices — GET ${url}`);
+    try {
+      const data = await getDevices();
+      console.log("[App] Devices response:", data);
+      setDevices(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("[App] Failed to fetch devices:", err);
+      setDevices([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDevices();
+    const interval = setInterval(fetchDevices, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchDevices]);
 
   // Load existing tests on mount; create a default one if empty.
   // If backend is unreachable, fall back to a single local row so the UI
@@ -332,14 +398,23 @@ export default function App() {
           console.log("[App] TP API response:", data);
           const description: string =
             typeof data?.description === "string" ? data.description : "";
+          const testType: string =
+            typeof data?.testType === "string" ? data.testType : "";
+          console.log("[TP API] testType:", data.testType);
           setRows((prev) =>
-            prev.map((r) => (r.id === id ? { ...r, details: description } : r)),
+            prev.map((r) =>
+              r.id === id
+                ? { ...r, details: description, requestType: testType }
+                : r,
+            ),
           );
-          // Persist testId + details to backend if row is saved
+          // Persist testId + details + requestType to backend if row is saved
           if (!isLocal) {
-            await updateTest(id, { testId: value, details: description }).catch(
-              console.error,
-            );
+            await updateTest(id, {
+              testId: value,
+              details: description,
+              requestType: testType,
+            }).catch(console.error);
           }
         } catch (err) {
           console.error("[App] TP API fetch error:", err);
@@ -609,6 +684,7 @@ export default function App() {
                   row={row}
                   rowIndex={index}
                   isFetchingDetails={rowUI[row.id]?.isFetchingDetails ?? false}
+                  devices={devices}
                   onTestIdChange={handleTestIdChange}
                   onDeviceIdChange={handleDeviceIdChange}
                   onRequestTypeChange={handleRequestTypeChange}

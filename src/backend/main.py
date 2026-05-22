@@ -6,8 +6,11 @@
 
 import json
 import os
+import subprocess
+import threading
+import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 import uvicorn
@@ -15,6 +18,47 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+# ── ADB device polling ────────────────────────────────────────────────────────
+connected_devices: List[str] = []
+
+
+def _poll_adb_devices() -> None:
+    """Background thread: runs 'adb devices' every 30 seconds and updates connected_devices."""
+    global connected_devices
+    while True:
+        try:
+            print("[ADB] Running: adb devices")
+            result = subprocess.run(
+                ["adb", "devices"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            output = result.stdout
+            print(f"[ADB] Output:\n{output.strip()}")
+
+            # Parse: skip header line, keep lines ending with 'device' (not offline/unauthorized)
+            devices: List[str] = []
+            for line in output.splitlines()[1:]:
+                line = line.strip()
+                if line.endswith("\tdevice") or line.endswith(" device"):
+                    device_id = line.split()[0]
+                    devices.append(device_id)
+
+            connected_devices = devices
+            print(f"[ADB] Connected devices: {connected_devices}")
+
+        except FileNotFoundError:
+            print("[ADB] ERROR: 'adb' is not installed or not found in PATH. connected_devices set to [].")
+            connected_devices = []
+        except subprocess.TimeoutExpired:
+            print("[ADB] WARNING: 'adb devices' timed out. connected_devices unchanged.")
+        except Exception as exc:
+            print(f"[ADB] ERROR: Unexpected error polling adb devices: {exc}")
+            connected_devices = []
+
+        time.sleep(30)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DATA_FILE = os.path.join(os.path.dirname(__file__), "test_data.json")
@@ -72,6 +116,14 @@ def _init_data_file() -> None:
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = FastAPI(title="5G Lab Test Automator API")
+
+
+@app.on_event("startup")
+def _start_adb_polling() -> None:
+    """Launch the ADB polling background thread when the server starts."""
+    thread = threading.Thread(target=_poll_adb_devices, daemon=True, name="adb-poller")
+    thread.start()
+    print("[ADB] Background polling thread started (interval: 30s).")
 
 app.add_middleware(
     CORSMiddleware,
@@ -198,6 +250,13 @@ async def start_test(row_id: str):
     print(f"[DATA] Test row id={row_id} finished with status={target['status']}")
     return target
 
+
+
+@app.get("/api/devices")
+async def list_devices():
+    """Return the list of currently connected ADB devices."""
+    print(f"[DEVICES] Returning connected devices: {connected_devices}")
+    return {"devices": connected_devices}
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":

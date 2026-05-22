@@ -68,3 +68,6 @@ export function deleteTest(id: string): Promise<void> {
 export function startTest(id: string): Promise<TestRow> {
   return apiFetch<TestRow>("POST", `/api/tests/${id}/start`);
 }
+export function getDevices(): Promise<string[]> {
+  return apiFetch<string[]>("GET", "/api/devices");
+}
